@@ -33,8 +33,9 @@ jobs:
           cache: true
 
       - name: Ensure deps are downloaded
+        working-directory: realms
         run: go mod download
 
       - name: Format
-        working-directory: realms
+        working-directory: realms/src
         run: go run github.com/gnolang/gno/gnovm/cmd/gno  fmt -diff ./...

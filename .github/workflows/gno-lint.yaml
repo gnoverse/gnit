@@ -32,8 +32,9 @@ jobs:
           cache: true
 
       - name: Ensure deps are downloaded
+        working-directory: realms
         run: go mod download
 
       - name: Lint
-        working-directory: realms
+        working-directory: realms/src
         run: go run github.com/gnolang/gno/gnovm/cmd/gno lint ./... -v
