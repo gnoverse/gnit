@@ -1,4 +1,4 @@
-name: Realms
+name: Test
 
 on:
   push:
