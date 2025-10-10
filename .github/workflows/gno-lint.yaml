@@ -1,8 +1,8 @@
-name: Lint
+name: Realms
 
 on:
   push:
-    branches: [ main ]
+    branches: [  main ]
     paths:
       - "realms/**"
       - ".github/workflows/**"
@@ -31,19 +31,9 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Checkout Gno repo
-        uses: actions/checkout@v4
-        with:
-          repository: gnolang/gno
-          ref: master
-          path: gno-repo
-
-      - name: Build gno
-        working-directory: gno-repo
-        run: |
-          make install
-          echo "$GOBIN" >> $GITHUB_PATH
+      - name: Ensure deps are downloaded
+        run: go mod download
 
       - name: Lint
         working-directory: realms
-        run: gno lint ./... -v
+        run: go run github.com/gnolang/gno/gnovm/cmd/gno lint ./... -v

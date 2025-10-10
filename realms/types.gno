@@ -1,8 +1,6 @@
 package gnit
 
 import (
-	"std"
-
 	"gno.land/p/nt/avl"
 )
 
@@ -28,7 +26,7 @@ type Commit struct {
 type Identity struct {
 	Name    string
 	Email   string
-	Address std.Address
+	Address address
 }
 
 // type TreeEntry struct {
