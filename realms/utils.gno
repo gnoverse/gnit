@@ -1,7 +1,7 @@
 package gnit
 
 import (
-    "strconv"
+	"strconv"
 )
 
 func createTreeHash(files map[string][]byte) string {
