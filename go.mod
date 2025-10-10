@@ -4,7 +4,7 @@ go 1.23.0
 
 toolchain go1.24.3
 
-require github.com/gnolang/gno v0.0.0-20250930114629-66df56529bed
+require github.com/gnolang/gno v0.0.0-20251009165425-85dc220ad6c3
 
 require (
 	github.com/bendory/conway-hebrew-calendar v0.0.0-20210829020739-dcc34210ce9b // indirect
