@@ -1,4 +1,4 @@
-module community
+module gnit
 
 go 1.23.0
 

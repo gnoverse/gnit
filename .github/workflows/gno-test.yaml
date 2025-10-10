@@ -35,5 +35,5 @@ jobs:
         run: go mod download
 
       - name: Test
-        working-directory: packages
+        working-directory: realms
         run: go run github.com/gnolang/gno/gnovm/cmd/gno test ./... -v

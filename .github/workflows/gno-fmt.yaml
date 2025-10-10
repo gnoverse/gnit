@@ -36,5 +36,5 @@ jobs:
         run: go mod download
 
       - name: Format
-        working-directory: packages
+        working-directory: realms
         run: go run github.com/gnolang/gno/gnovm/cmd/gno  fmt -diff ./...
