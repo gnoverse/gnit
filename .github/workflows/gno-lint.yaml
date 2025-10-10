@@ -40,7 +40,9 @@ jobs:
 
       - name: Build gno
         working-directory: gno-repo
-        run: make install
+        run: |
+          make install
+          echo "$GOBIN" >> $GITHUB_PATH
 
       - name: Lint
         working-directory: realms
