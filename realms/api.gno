@@ -1,0 +1,119 @@
+package gnit
+
+import (
+	"gno.land/p/nt/avl"
+)
+
+func NewRepository(name string) *Repository {
+	return &Repository{
+		identity: Identity{
+			Name: name,
+		},
+		head: "main",
+	}
+}
+
+func (r *Repository) Pull(file string) []byte {
+	headCommit := r.GetHeadCommit()
+	if headCommit == nil {
+		return nil
+	}
+
+	return r.GetFile(headCommit.Hash, file)
+}
+
+func (r *Repository) Commit(message string, files map[string][]byte) string {
+	if r.commits == nil {
+		r.commits = avl.NewTree()
+	}
+	if r.objects == nil {
+		r.objects = avl.NewTree()
+	}
+	if r.refs == nil {
+		r.refs = avl.NewTree()
+	}
+
+	treeHash := createTreeHash(files)
+
+	tree := make(map[string]string)
+	for path, content := range files {
+		objectHash := createObjectHash(content)
+		r.objects.Set(objectHash, content)
+		tree[path] = objectHash
+	}
+
+	r.objects.Set(treeHash, tree)
+
+	timestamp := int64(12345)
+
+	commit := &Commit{
+		Tree:      treeHash,
+		Parents:   []string{},
+		Author:    r.identity,
+		Committer: r.identity,
+		Message:   message,
+		Timestamp: timestamp,
+	}
+
+	commitHash := createCommitHash(commit)
+	commit.Hash = commitHash
+
+	r.commits.Set(commitHash, commit)
+	r.refs.Set(r.head, commitHash)
+
+	return commitHash
+}
+
+func (r *Repository) GetCommit(hash string) *Commit {
+	if r.commits == nil {
+		return nil
+	}
+	value, exists := r.commits.Get(hash)
+	if !exists {
+		return nil
+	}
+	return value.(*Commit)
+}
+
+func (r *Repository) GetFile(commitHash, path string) []byte {
+	commit := r.GetCommit(commitHash)
+	if commit == nil {
+		return nil
+	}
+
+	treeValue, exists := r.objects.Get(commit.Tree)
+	if !exists {
+		return nil
+	}
+
+	tree := treeValue.(map[string]string)
+
+	objectHash, exists := tree[path]
+	if !exists {
+		return nil
+	}
+
+	fileValue, exists := r.objects.Get(objectHash)
+	if !exists {
+		return nil
+	}
+
+	return fileValue.([]byte)
+}
+
+func (r *Repository) GetHeadCommit() *Commit {
+	if r.refs == nil {
+		return nil
+	}
+
+	commitHash, exists := r.refs.Get(r.head)
+	if !exists {
+		return nil
+	}
+
+	return r.GetCommit(commitHash.(string))
+}
+
+func (r *Repository) GetCurrentBranch() string {
+	return r.head
+}
