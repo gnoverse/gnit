@@ -1,2 +1,2 @@
 .PHONY: install
-install:;     go install -C ./cmd
+install:;     CGO_ENABLED=0 go install -C ./cmd
