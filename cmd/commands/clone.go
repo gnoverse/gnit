@@ -27,7 +27,12 @@ func (c *Clone) Execute(realmPath string) error {
 		return fmt.Errorf(".gnit file already exists in current directory")
 	}
 
-	if err := os.WriteFile(".gnit", []byte(realmPath+"\n"), 0644); err != nil {
+	gnitFile := config.GnitFile{
+		RealmPath:   realmPath,
+		StagedFiles: []string{},
+	}
+
+	if err := WriteGnitFileData(&gnitFile); err != nil {
 		return fmt.Errorf("failed to create .gnit file: %w", err)
 	}
 

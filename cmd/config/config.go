@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 )
@@ -14,12 +15,24 @@ type Config struct {
 	Account   string
 }
 
+type GnitFile struct {
+	RealmPath   string   `json:"realm_path"`
+	StagedFiles []string `json:"staged_files"`
+}
+
 func DefaultConfig() *Config {
 	realmPath := "gno.land/r/example"
 
 	if data, err := os.ReadFile(".gnit"); err == nil {
-		if path := strings.TrimSpace(string(data)); path != "" {
-			realmPath = path
+		content := strings.TrimSpace(string(data))
+
+		var gnitFile GnitFile
+		if err := json.Unmarshal([]byte(content), &gnitFile); err == nil {
+			if gnitFile.RealmPath != "" {
+				realmPath = gnitFile.RealmPath
+			}
+		} else if content != "" {
+			realmPath = content
 		}
 	}
 

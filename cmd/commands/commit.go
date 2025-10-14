@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	"gnit/config"
 	"gnit/filesystem"
@@ -23,13 +24,22 @@ func NewCommit(client *gnokey.Client, cfg *config.Config) *Commit {
 func (c *Commit) Execute(message string) error {
 	fmt.Printf("Committing with message: '%s'...\n", message)
 
-	files, err := filesystem.CollectFiles()
+	gnitFile, err := ReadGnitFile()
 	if err != nil {
-		return fmt.Errorf("failed to collect files: %w", err)
+		return fmt.Errorf("failed to read .gnit file: %w", err)
 	}
 
-	if len(files) == 0 {
-		return fmt.Errorf("no files found to commit")
+	if len(gnitFile.StagedFiles) == 0 {
+		return fmt.Errorf("no files staged for commit\nUse 'gnit add <file>' to stage files")
+	}
+
+	files := make(map[string][]byte)
+	for _, filename := range gnitFile.StagedFiles {
+		content, err := os.ReadFile(filename)
+		if err != nil {
+			return fmt.Errorf("failed to read '%s': %w", filename, err)
+		}
+		files[filename] = content
 	}
 
 	fmt.Printf("Files to commit: %d\n", len(files))
@@ -43,6 +53,11 @@ func (c *Commit) Execute(message string) error {
 
 	if err := c.client.Run(gnoCode); err != nil {
 		return fmt.Errorf("commit failed: %w", err)
+	}
+
+	gnitFile.StagedFiles = []string{}
+	if err := WriteGnitFileData(gnitFile); err != nil {
+		fmt.Printf("Warning: failed to clear staged files: %v\n", err)
 	}
 
 	fmt.Printf("Commit successful!\n")
