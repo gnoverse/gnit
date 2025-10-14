@@ -1,5 +1,10 @@
 package config
 
+import (
+	"os"
+	"strings"
+)
+
 type Config struct {
 	RealmPath string
 	Remote    string
@@ -10,8 +15,16 @@ type Config struct {
 }
 
 func DefaultConfig() *Config {
+	realmPath := "gno.land/r/example"
+
+	if data, err := os.ReadFile(".gnit"); err == nil {
+		if path := strings.TrimSpace(string(data)); path != "" {
+			realmPath = path
+		}
+	}
+
 	return &Config{
-		RealmPath: "gno.land/r/example",
+		RealmPath: realmPath,
 		Remote:    "tcp://127.0.0.1:26657",
 		ChainID:   "dev",
 		GasFee:    "10000000ugnot",

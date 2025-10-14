@@ -23,6 +23,8 @@ func main() {
 	command := os.Args[1]
 
 	switch command {
+	case "clone":
+		handleClone(client, cfg)
 	case "pull":
 		handlePull(client, cfg)
 	case "commit":
@@ -32,6 +34,22 @@ func main() {
 	default:
 		fmt.Printf("Error: unknown command '%s'\n", command)
 		printUsage()
+		os.Exit(1)
+	}
+}
+
+func handleClone(client *gnokey.Client, cfg *config.Config) {
+	if len(os.Args) < 3 {
+		fmt.Println("Error: realm path required for clone")
+		fmt.Println("Usage: gnit clone <realm-path>")
+		os.Exit(1)
+	}
+
+	realmPath := os.Args[2]
+	cmd := commands.NewClone(client, cfg)
+
+	if err := cmd.Execute(realmPath); err != nil {
+		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -76,11 +94,13 @@ func printUsage() {
 	fmt.Println("Usage: gnit <command> [options]")
 	fmt.Println()
 	fmt.Println("Available commands:")
-	fmt.Println("  pull [file]       Fetch file(s) from the repository (all files if no file specified)")
-	fmt.Println("  commit <message>  Commit changes with a message")
-	fmt.Println("  help              Display this help")
+	fmt.Println("  clone <realm-path>  Clone a repository from a realm path")
+	fmt.Println("  pull [file]         Fetch file(s) from the repository (all files if no file specified)")
+	fmt.Println("  commit <message>    Commit changes with a message")
+	fmt.Println("  help                Display this help")
 	fmt.Println()
 	fmt.Println("Examples:")
+	fmt.Println("  gnit clone gno.land/r/demo/myrepo")
 	fmt.Println("  gnit pull                 # Pull all files")
 	fmt.Println("  gnit pull example.gno     # Pull specific file")
 	fmt.Println("  gnit commit \"My commit message\"")
