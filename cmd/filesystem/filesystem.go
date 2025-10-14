@@ -22,23 +22,19 @@ func CollectFiles() (map[string][]byte, error) {
 			return err
 		}
 
-		// Skip directories
 		if info.IsDir() {
 			return nil
 		}
 
-		// Normalize path
 		cleanPath := filepath.Clean(path)
 		if strings.HasPrefix(cleanPath, "./") {
 			cleanPath = cleanPath[2:]
 		}
 
-		// Check if file should be ignored
 		if matcher.Match(cleanPath) {
 			return nil
 		}
 
-		// Read file content
 		content, readErr := os.ReadFile(path)
 		if readErr != nil {
 			fmt.Printf("Warning: unable to read %s: %v\n", path, readErr)
@@ -57,7 +53,6 @@ func CollectFiles() (map[string][]byte, error) {
 }
 
 func WriteFile(path string, content []byte) error {
-	// Create parent directories if they don't exist
 	dir := filepath.Dir(path)
 	if dir != "." && dir != "" {
 		if err := os.MkdirAll(dir, 0755); err != nil {

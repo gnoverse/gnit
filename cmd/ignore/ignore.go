@@ -43,7 +43,6 @@ func NewMatcher(root string) (*Matcher, error) {
 }
 
 func (m *Matcher) Match(path string) bool {
-	// Only ignore .git directory, not files starting with .git
 	if strings.Contains(path, ".git/") || path == ".git" {
 		return true
 	}

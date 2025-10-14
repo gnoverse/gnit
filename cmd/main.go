@@ -37,15 +37,17 @@ func main() {
 }
 
 func handlePull(client *gnokey.Client, cfg *config.Config) {
+	cmd := commands.NewPull(client, cfg)
+
 	if len(os.Args) < 3 {
-		fmt.Println("Error: filename required for pull")
-		fmt.Println("Usage: gnit pull <file>")
-		os.Exit(1)
+		if err := cmd.ExecuteAll(); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	filename := os.Args[2]
-	cmd := commands.NewPull(client, cfg)
-
 	if err := cmd.Execute(filename); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -74,11 +76,12 @@ func printUsage() {
 	fmt.Println("Usage: gnit <command> [options]")
 	fmt.Println()
 	fmt.Println("Available commands:")
-	fmt.Println("  pull <file>       Fetch a file from the repository")
+	fmt.Println("  pull [file]       Fetch file(s) from the repository (all files if no file specified)")
 	fmt.Println("  commit <message>  Commit changes with a message")
 	fmt.Println("  help              Display this help")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  gnit pull example.gno")
+	fmt.Println("  gnit pull                 # Pull all files")
+	fmt.Println("  gnit pull example.gno     # Pull specific file")
 	fmt.Println("  gnit commit \"My commit message\"")
 }

@@ -32,6 +32,19 @@ func (c *Client) Query(expression string) ([]byte, error) {
 	return parseHexOutput(string(output))
 }
 
+func (c *Client) QueryRaw(expression string) (string, error) {
+	cmd := exec.Command("gnokey", "query", "vm/qeval",
+		"-data", expression,
+		"-remote", c.config.Remote)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("query failed: %w", err)
+	}
+
+	return extractDataLine(string(output))
+}
+
 func (c *Client) Run(gnoCode string) error {
 	tmpFile := "/tmp/gnit_tx.gno"
 	if err := os.WriteFile(tmpFile, []byte(gnoCode), 0644); err != nil {
@@ -77,6 +90,10 @@ func parseHexOutput(output string) ([]byte, error) {
 		return []byte{}, nil
 	}
 
+	if strings.Contains(dataLine, "slice[]") {
+		return []byte{}, nil
+	}
+
 	re := regexp.MustCompile(`slice\[0x([0-9a-fA-F]+)\]`)
 	matches := re.FindStringSubmatch(dataLine)
 
@@ -90,4 +107,14 @@ func parseHexOutput(output string) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+func extractDataLine(output string) (string, error) {
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "data: ") {
+			return line, nil
+		}
+	}
+	return "", fmt.Errorf("data: line not found in output")
 }

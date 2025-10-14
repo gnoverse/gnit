@@ -117,3 +117,24 @@ func (r *Repository) GetHeadCommit() *Commit {
 func (r *Repository) GetCurrentBranch() string {
 	return r.head
 }
+
+func (r *Repository) ListFiles() []string {
+	headCommit := r.GetHeadCommit()
+	if headCommit == nil {
+		return []string{}
+	}
+
+	treeValue, exists := r.objects.Get(headCommit.Tree)
+	if !exists {
+		return []string{}
+	}
+
+	tree := treeValue.(map[string]string)
+	files := make([]string, 0, len(tree))
+
+	for path := range tree {
+		files = append(files, path)
+	}
+
+	return files
+}
