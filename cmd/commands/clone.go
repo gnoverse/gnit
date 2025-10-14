@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"gnit/config"
 	"gnit/gnokey"
@@ -23,8 +24,21 @@ func NewClone(client *gnokey.Client, cfg *config.Config) *Clone {
 func (c *Clone) Execute(realmPath string) error {
 	fmt.Printf("Cloning repository from '%s'...\n", realmPath)
 
-	if _, err := os.Stat(".gnit"); err == nil {
-		return fmt.Errorf(".gnit file already exists in current directory")
+	repoName := extractRepoName(realmPath)
+	if repoName == "" {
+		return fmt.Errorf("invalid realm path format")
+	}
+
+	if _, err := os.Stat(repoName); err == nil {
+		return fmt.Errorf("directory '%s' already exists", repoName)
+	}
+
+	if err := os.Mkdir(repoName, 0755); err != nil {
+		return fmt.Errorf("failed to create directory '%s': %w", repoName, err)
+	}
+
+	if err := os.Chdir(repoName); err != nil {
+		return fmt.Errorf("failed to change to directory '%s': %w", repoName, err)
 	}
 
 	gnitFile := config.GnitFile{
@@ -46,6 +60,17 @@ func (c *Clone) Execute(realmPath string) error {
 		return fmt.Errorf("failed to pull files: %w", err)
 	}
 
-	fmt.Println("\nRepository cloned successfully!")
+	fmt.Printf("\nRepository cloned successfully into '%s'!\n", repoName)
 	return nil
+}
+
+func extractRepoName(realmPath string) string {
+	realmPath = strings.TrimSuffix(realmPath, "/")
+
+	parts := strings.Split(realmPath, "/")
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return parts[len(parts)-1]
 }
