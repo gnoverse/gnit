@@ -22,6 +22,10 @@ func NewCommit(client *gnokey.Client, cfg *config.Config) *Commit {
 }
 
 func (c *Commit) Execute(message string) error {
+	if err := CheckGnitRepository(); err != nil {
+		return err
+	}
+
 	fmt.Printf("Committing with message: '%s'...\n", message)
 
 	gnitFile, err := ReadGnitFile()

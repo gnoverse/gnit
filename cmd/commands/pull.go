@@ -22,6 +22,10 @@ func NewPull(client *gnokey.Client, cfg *config.Config) *Pull {
 }
 
 func (p *Pull) Execute(filename string) error {
+	if err := CheckGnitRepository(); err != nil {
+		return err
+	}
+
 	fmt.Printf("Pulling '%s'...\n", filename)
 
 	query := fmt.Sprintf("%s.Repo.Pull(\"%s\")", p.config.RealmPath, filename)
@@ -39,6 +43,10 @@ func (p *Pull) Execute(filename string) error {
 }
 
 func (p *Pull) ExecuteAll() error {
+	if err := CheckGnitRepository(); err != nil {
+		return err
+	}
+
 	fmt.Println("Fetching list of files...")
 
 	query := fmt.Sprintf("%s.Repo.ListFiles()", p.config.RealmPath)

@@ -21,13 +21,17 @@ func NewAdd(cfg *config.Config) *Add {
 }
 
 func (a *Add) Execute(paths []string) error {
+	if err := CheckGnitRepository(); err != nil {
+		return err
+	}
+
 	if len(paths) == 0 {
 		return fmt.Errorf("no files or directories specified")
 	}
 
 	gnitFile, err := ReadGnitFile()
 	if err != nil {
-		return fmt.Errorf("failed to read .gnit file: %w\nRun 'gnit clone <realm-path>' first", err)
+		return fmt.Errorf("failed to read .gnit file: %w", err)
 	}
 
 	matcher, err := ignore.NewMatcher(".")

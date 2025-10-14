@@ -55,6 +55,14 @@ func (c *Clone) Execute(realmPath string) error {
 	cloneCfg := *c.config
 	cloneCfg.RealmPath = realmPath
 
+	query := fmt.Sprintf("%s.Repo.ListFiles()", realmPath)
+	_, err := c.client.QueryRaw(query)
+	if err != nil {
+		os.Chdir("..")
+		os.RemoveAll(repoName)
+		return fmt.Errorf("realm '%s' does not exist or is not accessible", realmPath)
+	}
+
 	pull := NewPull(c.client, &cloneCfg)
 	if err := pull.ExecuteAll(); err != nil {
 		return fmt.Errorf("failed to pull files: %w", err)
