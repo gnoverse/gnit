@@ -98,7 +98,7 @@ func main() {
 		}
 	}
 
-	hash := example.Repo.Commit(%q, files)
+	hash := example.Repository.Commit(%q, files)
 	println("Commit hash:", hash)
 }
 `, filesData, message)

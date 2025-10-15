@@ -34,7 +34,7 @@ func (p *Pull) Execute(filename string) error {
 
 	fmt.Printf("Pulling '%s'...\n", filename)
 
-	query := fmt.Sprintf("%s.Repo.Pull(\"%s\")", p.config.RealmPath, filename)
+	query := fmt.Sprintf("%s.Repository.Pull(\"%s\")", p.config.RealmPath, filename)
 	content, err := p.client.Query(query)
 	if err != nil {
 		return fmt.Errorf("failed to query file: %w", err)
@@ -55,7 +55,7 @@ func (p *Pull) ExecuteAll() error {
 
 	fmt.Println("Fetching list of files...")
 
-	query := fmt.Sprintf("%s.Repo.ListFiles()", p.config.RealmPath)
+	query := fmt.Sprintf("%s.Repository.ListFiles()", p.config.RealmPath)
 	result, err := p.client.QueryRaw(query)
 	if err != nil {
 		return fmt.Errorf("failed to list files: %w", err)

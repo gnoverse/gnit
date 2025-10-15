@@ -35,10 +35,10 @@ package myrepo
 
 import "gno.land/p/demo/gnit"
 
-var Repo *gnit.Repository
+var Repository *gnit.Repository
 
 func init() {
-    Repo = gnit.NewRepository("myrepo")
+    Repository = gnit.NewRepository("myrepo")
 }
 ```
 
