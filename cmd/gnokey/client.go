@@ -46,6 +46,32 @@ func (c *Client) QueryRaw(expression string) (string, error) {
 	return extractDataLine(string(output))
 }
 
+func (c *Client) QueryFileList(realmPath string) (string, error) {
+	cmd := exec.Command("gnokey", "query", "vm/qfile",
+		"-data", realmPath,
+		"-remote", c.config.Remote)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("query file list failed: %w", err)
+	}
+
+	return string(output), nil
+}
+
+func (c *Client) QueryFileContent(filePath string) (string, error) {
+	cmd := exec.Command("gnokey", "query", "vm/qfile",
+		"-data", filePath,
+		"-remote", c.config.Remote)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("query file content failed: %w", err)
+	}
+
+	return string(output), nil
+}
+
 func (c *Client) Run(gnoCode string) error {
 	tmpFile := "/tmp/gnit_tx.gno"
 	if err := os.WriteFile(tmpFile, []byte(gnoCode), 0644); err != nil {

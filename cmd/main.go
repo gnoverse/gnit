@@ -75,7 +75,22 @@ func handleAdd(cfg *config.Config) {
 func handlePull(client *gnokey.Client, cfg *config.Config) {
 	cmd := commands.NewPull(client, cfg)
 
-	if len(os.Args) < 3 {
+	sourceMode := false
+	args := []string{}
+	for i := 2; i < len(os.Args); i++ {
+		arg := os.Args[i]
+		if arg == "--source" || arg == "-s" {
+			sourceMode = true
+		} else {
+			args = append(args, arg)
+		}
+	}
+
+	if sourceMode {
+		cmd.SetSourceMode(true)
+	}
+
+	if len(args) == 0 {
 		if err := cmd.ExecuteAll(); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -83,7 +98,7 @@ func handlePull(client *gnokey.Client, cfg *config.Config) {
 		return
 	}
 
-	filename := os.Args[2]
+	filename := args[0]
 	if err := cmd.Execute(filename); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -114,14 +129,16 @@ func printUsage() {
 	fmt.Println("Available commands:")
 	fmt.Println("  clone <realm-path>       Clone a repository from a realm path")
 	fmt.Println("  add <file|directory>...  Stage files or directories for commit")
-	fmt.Println("  pull [file]              Fetch file(s) from the repository (all files if no file specified)")
+	fmt.Println("  pull [options] [file]    Fetch file(s) from the repository")
+	fmt.Println("    --source, -s           Also pull the realm source code to realm.gno")
 	fmt.Println("  commit <message>         Commit staged changes with a message")
 	fmt.Println("  help                     Display this help")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  gnit clone gno.land/r/demo/myrepo")
 	fmt.Println("  gnit add file.gno src/")
-	fmt.Println("  gnit pull                 # Pull all files")
-	fmt.Println("  gnit pull example.gno     # Pull specific file")
+	fmt.Println("  gnit pull                    # Pull all files from repository")
+	fmt.Println("  gnit pull example.gno        # Pull specific file")
+	fmt.Println("  gnit pull -s                 # Pull all files + realm source code")
 	fmt.Println("  gnit commit \"My commit message\"")
 }
