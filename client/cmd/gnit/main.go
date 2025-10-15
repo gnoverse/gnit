@@ -26,6 +26,8 @@ func main() {
 	command := os.Args[1]
 
 	switch command {
+	case "init":
+		handleInit(client, cfg)
 	case "clone":
 		handleClone(client, cfg)
 	case "add":
@@ -39,6 +41,15 @@ func main() {
 	default:
 		fmt.Printf("Error: unknown command '%s'\n", command)
 		printUsage()
+		os.Exit(1)
+	}
+}
+
+func handleInit(client *gnokey.Client, cfg *config.Config) {
+	cmd := NewInit(client, cfg)
+
+	if err := cmd.Execute(); err != nil {
+		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 }
