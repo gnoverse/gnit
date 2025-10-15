@@ -1,4 +1,4 @@
-package commands
+package main
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gnit/config"
-	"gnit/ignore"
+	config "github.com/gnoverse/gnit"
+	ignore "github.com/gnoverse/gnit"
 )
 
 type Add struct {

@@ -1,4 +1,4 @@
-package commands
+package main
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"gnit/config"
+	config "github.com/gnoverse/gnit"
 )
 
 func CheckGnitRepository() error {

@@ -1,12 +1,12 @@
-package commands
+package main
 
 import (
 	"fmt"
 	"os"
 
-	"gnit/config"
-	"gnit/filesystem"
-	"gnit/gnokey"
+	config "github.com/gnoverse/gnit"
+	filesystem "github.com/gnoverse/gnit"
+	gnokey "github.com/gnoverse/gnit"
 )
 
 type Commit struct {

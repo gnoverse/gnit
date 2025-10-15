@@ -1,4 +1,4 @@
-package gnokey
+package client
 
 import (
 	"encoding/hex"
@@ -7,15 +7,13 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
-
-	"gnit/config"
 )
 
 type Client struct {
-	config *config.Config
+	config *Config
 }
 
-func NewClient(cfg *config.Config) *Client {
+func NewClient(cfg *Config) *Client {
 	return &Client{config: cfg}
 }
 

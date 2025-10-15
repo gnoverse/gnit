@@ -5,9 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"gnit/commands"
-	"gnit/config"
-	"gnit/gnokey"
+	config "github.com/gnoverse/gnit"
+	gnokey "github.com/gnoverse/gnit"
 )
 
 func main() {
@@ -48,7 +47,7 @@ func handleClone(client *gnokey.Client, cfg *config.Config) {
 	}
 
 	realmPath := os.Args[2]
-	cmd := commands.NewClone(client, cfg)
+	cmd := NewClone(client, cfg)
 
 	if err := cmd.Execute(realmPath); err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -64,7 +63,7 @@ func handleAdd(cfg *config.Config) {
 	}
 
 	paths := os.Args[2:]
-	cmd := commands.NewAdd(cfg)
+	cmd := NewAdd(cfg)
 
 	if err := cmd.Execute(paths); err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -73,7 +72,7 @@ func handleAdd(cfg *config.Config) {
 }
 
 func handlePull(client *gnokey.Client, cfg *config.Config) {
-	cmd := commands.NewPull(client, cfg)
+	cmd := NewPull(client, cfg)
 
 	sourceMode := false
 	args := []string{}
@@ -115,7 +114,7 @@ func handleCommit(client *gnokey.Client, cfg *config.Config) {
 	message := strings.Join(os.Args[2:], " ")
 	message = strings.Trim(message, "\"")
 
-	cmd := commands.NewCommit(client, cfg)
+	cmd := NewCommit(client, cfg)
 
 	if err := cmd.Execute(message); err != nil {
 		fmt.Printf("Error: %v\n", err)

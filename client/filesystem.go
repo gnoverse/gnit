@@ -1,18 +1,16 @@
-package filesystem
+package client
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"gnit/ignore"
 )
 
 func CollectFiles() (map[string][]byte, error) {
 	files := make(map[string][]byte)
 
-	matcher, err := ignore.NewMatcher(".")
+	matcher, err := NewMatcher(".")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load .gnitignore: %w", err)
 	}

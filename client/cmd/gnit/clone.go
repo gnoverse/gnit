@@ -1,12 +1,12 @@
-package commands
+package main
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
-	"gnit/config"
-	"gnit/gnokey"
+	config "github.com/gnoverse/gnit"
+	gnokey "github.com/gnoverse/gnit"
 )
 
 type Clone struct {

@@ -1,4 +1,4 @@
-package ignore
+package client
 
 import (
 	"bufio"
