@@ -34,8 +34,10 @@ func (p *Pull) Execute(filename string) error {
 
 	fmt.Printf("Pulling '%s'...\n", filename)
 
-	query := fmt.Sprintf("%s.Repository.Pull(\"%s\")", p.config.RealmPath, filename)
-	content, err := p.client.Query(query)
+	packageAlias := config.PackageAlias(p.config.RealmPath)
+	query := fmt.Sprintf("%s.Repository.Pull(\"%s\")", packageAlias, filename)
+
+	content, err := p.client.RunQuery(p.config.RealmPath, query)
 	if err != nil {
 		return fmt.Errorf("failed to query file: %w", err)
 	}

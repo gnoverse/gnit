@@ -3,6 +3,7 @@ package client
 import (
 	"errors"
 	"os"
+	"path"
 	"strings"
 )
 
@@ -37,6 +38,10 @@ func (c *Config) ValidateRealmPath() error {
 		return errors.New("no module path found in gnomod.toml")
 	}
 	return nil
+}
+
+func PackageAlias(realmPath string) string {
+	return path.Base(realmPath)
 }
 
 func readPackagePathFromGnomod() string {

@@ -1,11 +1,9 @@
 package client
 
 import (
-	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 )
 
@@ -17,19 +15,6 @@ func NewClient(cfg *Config) *Client {
 	return &Client{config: cfg}
 }
 
-func (c *Client) Query(expression string) ([]byte, error) {
-	cmd := exec.Command("gnokey", "query", "vm/qeval",
-		"-data", expression,
-		"-remote", c.config.Remote)
-
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("query failed: %w", err)
-	}
-
-	return parseHexOutput(string(output))
-}
-
 func (c *Client) QueryRaw(expression string) (string, error) {
 	cmd := exec.Command("gnokey", "query", "vm/qeval",
 		"-data", expression,
@@ -39,7 +24,6 @@ func (c *Client) QueryRaw(expression string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("query failed: %w", err)
 	}
-	fmt.Println("QueryRaw output:", string(output))
 
 	return extractDataLine(string(output))
 }
@@ -113,41 +97,116 @@ func (c *Client) Run(gnoCode string) error {
 	return nil
 }
 
-func parseHexOutput(output string) ([]byte, error) {
+func (c *Client) RunQuery(realmPath string, expression string) ([]byte, error) {
+	gnoCode := fmt.Sprintf(`package main
+
+import (
+	"%s"
+)
+
+func main() {
+	result := %s
+	content := make([]byte, len(result))
+	copy(content, result)
+	println(string(content))
+}
+`, realmPath, expression)
+
+	tmpFile := "/tmp/gnit_query.gno"
+	if err := os.WriteFile(tmpFile, []byte(gnoCode), 0644); err != nil {
+		return nil, fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(tmpFile)
+
+	cmd := exec.Command("gnokey", "maketx", "run",
+		"-gas-fee", c.config.GasFee,
+		"-gas-wanted", c.config.GasWanted,
+		"-broadcast",
+		"-chainid", c.config.ChainID,
+		"-remote", c.config.Remote,
+		c.config.Account,
+		tmpFile)
+
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("run query failed: %w", err)
+	}
+
+	content := extractTransactionOutput(string(output))
+	return []byte(content), nil
+}
+
+func extractTransactionOutput(output string) string {
 	lines := strings.Split(output, "\n")
-	var dataLine string
+	var contentLines []string
+	foundContent := false
+
 	for _, line := range lines {
-		if strings.HasPrefix(line, "data: ") {
-			dataLine = line
+		if foundContent && isTransactionEndMetadata(line) {
 			break
+		}
+
+		if foundContent {
+			contentLines = append(contentLines, line)
+			continue
+		}
+
+		if isTransactionMetadata(line) {
+			continue
+		}
+
+		foundContent = true
+		contentLines = append(contentLines, line)
+	}
+
+	return strings.Join(contentLines, "\n")
+}
+
+func isTransactionMetadata(line string) bool {
+	trimmed := strings.TrimSpace(line)
+
+	if trimmed == "" {
+		return true
+	}
+
+	metadataPrefixes := []string{
+		"GAS WANTED:",
+		"GAS USED:",
+		"HEIGHT:",
+		"EVENTS:",
+		"INFO:",
+		"TX HASH:",
+	}
+
+	for _, prefix := range metadataPrefixes {
+		if strings.HasPrefix(line, prefix) {
+			return true
 		}
 	}
 
-	if dataLine == "" {
-		return nil, fmt.Errorf("data: line not found in output")
+	return strings.Contains(line, "OK!")
+}
+
+func isTransactionEndMetadata(line string) bool {
+	metadataPrefixes := []string{
+		"GAS WANTED:",
+		"GAS USED:",
+		"HEIGHT:",
+		"EVENTS:",
+		"INFO:",
+		"TX HASH:",
 	}
 
-	if strings.Contains(dataLine, "(nil []uint8)") {
-		return []byte{}, nil
+	for _, prefix := range metadataPrefixes {
+		if strings.HasPrefix(line, prefix) {
+			return true
+		}
 	}
 
-	if strings.Contains(dataLine, "slice[]") {
-		return []byte{}, nil
-	}
-
-	re := regexp.MustCompile(`slice\[0x([0-9a-fA-F]+)\]`)
-	matches := re.FindStringSubmatch(dataLine)
-
-	if len(matches) < 2 {
-		return nil, fmt.Errorf("unrecognized output format: %s", dataLine)
-	}
-
-	data, err := hex.DecodeString(matches[1])
-	if err != nil {
-		return nil, fmt.Errorf("hex decoding error: %w", err)
-	}
-
-	return data, nil
+	return strings.Contains(line, "OK!")
 }
 
 func extractDataLine(output string) (string, error) {
