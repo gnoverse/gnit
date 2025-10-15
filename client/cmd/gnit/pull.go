@@ -55,19 +55,21 @@ func (p *Pull) ExecuteAll() error {
 		return err
 	}
 
-	fmt.Println("Fetching list of files...")
+	fmt.Println("Pulling all files from repository...")
 
-	query := fmt.Sprintf("%s.Repository.ListFiles()", p.config.RealmPath)
-	result, err := p.client.QueryRaw(query)
+	packageAlias := config.PackageAlias(p.config.RealmPath)
+	query := fmt.Sprintf("%s.Repository.SerializePullAll()", packageAlias)
+
+	serializedData, err := p.client.RunQuery(p.config.RealmPath, query)
 	if err != nil {
 		if p.sourceMode {
 			fmt.Println("Repository not found or empty, trying to pull realm source files...")
 			return p.pullRealmSource()
 		}
-		return fmt.Errorf("failed to list files: %w", err)
+		return fmt.Errorf("failed to pull files: %w", err)
 	}
 
-	if len(result) == 0 {
+	if len(serializedData) == 0 {
 		fmt.Println("No files found in repository")
 		if p.sourceMode {
 			return p.pullRealmSource()
@@ -75,9 +77,9 @@ func (p *Pull) ExecuteAll() error {
 		return nil
 	}
 
-	files, err := parseFileList(result)
+	files, err := parseSerializedFiles(string(serializedData))
 	if err != nil {
-		return fmt.Errorf("failed to parse file list: %w", err)
+		return fmt.Errorf("failed to parse files: %w", err)
 	}
 
 	if len(files) == 0 {
@@ -88,12 +90,13 @@ func (p *Pull) ExecuteAll() error {
 		return nil
 	}
 
-	fmt.Printf("Found %d file(s), pulling all...\n", len(files))
+	fmt.Printf("Found %d file(s), writing to disk...\n", len(files))
 
-	for _, filename := range files {
-		if err := p.Execute(filename); err != nil {
-			return fmt.Errorf("failed to pull '%s': %w", filename, err)
+	for filename, content := range files {
+		if err := filesystem.WriteFile(filename, content); err != nil {
+			return fmt.Errorf("failed to write '%s': %w", filename, err)
 		}
+		fmt.Printf("  pulled: %s (%d bytes)\n", filename, len(content))
 	}
 
 	fmt.Printf("\nSuccessfully pulled %d file(s)\n", len(files))
@@ -167,6 +170,55 @@ func parseRealmFileList(output string) []string {
 	}
 
 	return files
+}
+
+func parseSerializedFiles(data string) (map[string][]byte, error) {
+	lines := strings.Split(data, "\n")
+	files := make(map[string][]byte)
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		parts := strings.SplitN(line, "|", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		filename := unescapeString(parts[0])
+		content := unescapeString(parts[1])
+		files[filename] = []byte(content)
+	}
+
+	return files, nil
+}
+
+func unescapeString(s string) string {
+	result := ""
+	i := 0
+	for i < len(s) {
+		if s[i] == '\\' && i+1 < len(s) {
+			next := s[i+1]
+			if next == '\\' {
+				result += "\\"
+				i += 2
+			} else if next == '|' {
+				result += "|"
+				i += 2
+			} else if next == 'n' {
+				result += "\n"
+				i += 2
+			} else {
+				result += string(s[i])
+				i++
+			}
+		} else {
+			result += string(s[i])
+			i++
+		}
+	}
+	return result
 }
 
 func parseFileList(data string) ([]string, error) {

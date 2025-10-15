@@ -154,3 +154,57 @@ func (r *Repository) ListFiles() []string {
 
 	return files
 }
+
+func (r *Repository) PullAll() map[string][]byte {
+	headCommit := r.GetHeadCommit()
+	if headCommit == nil {
+		return map[string][]byte{}
+	}
+
+	treeValue, exists := r.objects.Get(headCommit.Tree)
+	if !exists {
+		return map[string][]byte{}
+	}
+
+	tree := treeValue.(map[string]string)
+	result := make(map[string][]byte)
+
+	for path, objectHash := range tree {
+		fileValue, exists := r.objects.Get(objectHash)
+		if exists {
+			result[path] = fileValue.([]byte)
+		}
+	}
+
+	return result
+}
+
+func (r *Repository) SerializePullAll() []byte {
+	files := r.PullAll()
+
+	var result string
+	for path, content := range files {
+		escapedPath := escapeString(path)
+		escapedContent := escapeString(string(content))
+		result += escapedPath + "|" + escapedContent + "\n"
+	}
+
+	return []byte(result)
+}
+
+func escapeString(s string) string {
+	result := ""
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c == '\\' {
+			result += "\\\\"
+		} else if c == '|' {
+			result += "\\|"
+		} else if c == '\n' {
+			result += "\\n"
+		} else {
+			result += string(c)
+		}
+	}
+	return result
+}
