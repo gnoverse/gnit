@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"os"
 	"strings"
 )
@@ -18,11 +19,8 @@ type GnitFile struct {
 	StagedFiles []string `json:"staged_files"`
 }
 
-func DefaultConfig() *Config {
+func DefaultConfig() (*Config, error) {
 	realmPath := readPackagePathFromGnomod()
-	if realmPath == "" {
-		realmPath = "gno.land/r/example"
-	}
 
 	return &Config{
 		RealmPath: realmPath,
@@ -31,7 +29,14 @@ func DefaultConfig() *Config {
 		GasFee:    "10000000ugnot",
 		GasWanted: "5000000000",
 		Account:   "test",
+	}, nil
+}
+
+func (c *Config) ValidateRealmPath() error {
+	if c.RealmPath == "" {
+		return errors.New("no module path found in gnomod.toml")
 	}
+	return nil
 }
 
 func readPackagePathFromGnomod() string {
@@ -47,7 +52,10 @@ func readPackagePathFromGnomod() string {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "module") {
 			parts := strings.Fields(line)
-			if len(parts) >= 2 {
+			if len(parts) >= 3 && parts[1] == "=" {
+				pkgPath := strings.Trim(parts[2], "\"")
+				return pkgPath
+			} else if len(parts) >= 2 {
 				pkgPath := strings.Trim(parts[1], "\"")
 				return pkgPath
 			}

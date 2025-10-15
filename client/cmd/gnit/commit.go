@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	config "github.com/gnoverse/gnit"
 	filesystem "github.com/gnoverse/gnit"
@@ -69,11 +70,14 @@ func (c *Commit) Execute(message string) error {
 }
 
 func (c *Commit) generateCommitCode(message, filesData string) string {
+	realmParts := strings.Split(c.config.RealmPath, "/")
+	packageAlias := realmParts[len(realmParts)-1]
+
 	return fmt.Sprintf(`package main
 
 import (
 	"strings"
-	"gno.land/r/example"
+	%q
 )
 
 func unescape(s string) string {
@@ -98,8 +102,8 @@ func main() {
 		}
 	}
 
-	hash := example.Repository.Commit(%q, files)
+	hash := %s.Repository.Commit(%q, files)
 	println("Commit hash:", hash)
 }
-`, filesData, message)
+`, c.config.RealmPath, filesData, packageAlias, message)
 }

@@ -58,6 +58,10 @@ func (p *Pull) ExecuteAll() error {
 	query := fmt.Sprintf("%s.Repository.ListFiles()", p.config.RealmPath)
 	result, err := p.client.QueryRaw(query)
 	if err != nil {
+		if p.sourceMode {
+			fmt.Println("Repository not found or empty, trying to pull realm source files...")
+			return p.pullRealmSource()
+		}
 		return fmt.Errorf("failed to list files: %w", err)
 	}
 

@@ -56,7 +56,9 @@ func (c *Clone) Execute(realmPath string) error {
 
 	pull := NewPull(c.client, &cloneCfg)
 	pull.SetSourceMode(true)
-	_ = pull.ExecuteAll()
+	if err := pull.ExecuteAll(); err != nil {
+		fmt.Printf("Warning: failed to pull files: %v\n", err)
+	}
 
 	fmt.Printf("\nRepository cloned successfully into '%s'!\n", repoName)
 	return nil

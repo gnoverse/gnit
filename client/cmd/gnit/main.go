@@ -15,7 +15,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	cfg := config.DefaultConfig()
+	cfg, err := config.DefaultConfig()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
 
 	client := gnokey.NewClient(cfg)
 
@@ -56,6 +60,11 @@ func handleClone(client *gnokey.Client, cfg *config.Config) {
 }
 
 func handleAdd(cfg *config.Config) {
+	if err := cfg.ValidateRealmPath(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
 	if len(os.Args) < 3 {
 		fmt.Println("Error: files or directories required for add")
 		fmt.Println("Usage: gnit add <file|directory>...")
@@ -72,6 +81,11 @@ func handleAdd(cfg *config.Config) {
 }
 
 func handlePull(client *gnokey.Client, cfg *config.Config) {
+	if err := cfg.ValidateRealmPath(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
 	cmd := NewPull(client, cfg)
 
 	sourceMode := false
@@ -105,6 +119,11 @@ func handlePull(client *gnokey.Client, cfg *config.Config) {
 }
 
 func handleCommit(client *gnokey.Client, cfg *config.Config) {
+	if err := cfg.ValidateRealmPath(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
 	if len(os.Args) < 3 {
 		fmt.Println("Error: message required for commit")
 		fmt.Println("Usage: gnit commit \"<message>\"")

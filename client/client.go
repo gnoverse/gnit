@@ -67,7 +67,23 @@ func (c *Client) QueryFileContent(filePath string) (string, error) {
 		return "", fmt.Errorf("query file content failed: %w", err)
 	}
 
-	return string(output), nil
+	content := string(output)
+	lines := strings.Split(content, "\n")
+
+	for i, line := range lines {
+		if strings.HasPrefix(line, "data: ") {
+			fileContent := strings.TrimPrefix(line, "data: ")
+			if i+1 < len(lines) {
+				remainingLines := strings.Join(lines[i+1:], "\n")
+				if remainingLines != "" {
+					fileContent = fileContent + "\n" + remainingLines
+				}
+			}
+			return fileContent, nil
+		}
+	}
+
+	return content, nil
 }
 
 func (c *Client) Run(gnoCode string) error {
