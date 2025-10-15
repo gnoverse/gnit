@@ -38,6 +38,8 @@ func main() {
 		handlePull(client, cfg)
 	case "commit":
 		handleCommit(client, cfg)
+	case "restore":
+		handleRestore(client, cfg)
 	case "help", "--help", "-h":
 		printUsage()
 	default:
@@ -168,6 +170,36 @@ func handleCommit(client *gnokey.Client, cfg *config.Config) {
 	}
 }
 
+func handleRestore(client *gnokey.Client, cfg *config.Config) {
+	if err := cfg.ValidateRealmPath(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	cmd := NewRestore(client, cfg)
+
+	staged := false
+	var paths []string
+
+	for i := 2; i < len(os.Args); i++ {
+		arg := os.Args[i]
+		if arg == "--staged" || arg == "-s" {
+			staged = true
+		} else {
+			paths = append(paths, arg)
+		}
+	}
+
+	if staged {
+		cmd.SetStaged(true)
+	}
+
+	if err := cmd.Execute(paths); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
 func printUsage() {
 	fmt.Println("Usage: gnit <command> [options]")
 	fmt.Println()
@@ -178,6 +210,8 @@ func printUsage() {
 	fmt.Println("  pull [options] [file]    Fetch file(s) from the repository")
 	fmt.Println("    --source, -s           Also pull the realm source code to realm.gno")
 	fmt.Println("  commit <message>         Commit staged changes with a message")
+	fmt.Println("  restore [options] [file] Restore working tree files or unstage files")
+	fmt.Println("    --staged, -s           Restore files in the staging area (unstage)")
 	fmt.Println("  help                     Display this help")
 	fmt.Println()
 	fmt.Println("Examples:")
@@ -188,4 +222,7 @@ func printUsage() {
 	fmt.Println("  gnit pull example.gno        # Pull specific file")
 	fmt.Println("  gnit pull -s                 # Pull all files + realm source code")
 	fmt.Println("  gnit commit \"My commit message\"")
+	fmt.Println("  gnit restore file.gno        # Restore file from repository")
+	fmt.Println("  gnit restore --staged file.gno # Unstage file")
+	fmt.Println("  gnit restore --staged        # Unstage all files")
 }
