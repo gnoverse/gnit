@@ -41,6 +41,29 @@ func createCommitHash(commit *Commit) string {
 	return simpleHash(content)
 }
 
+func createTreeHashFromMap(tree map[string]string) string {
+	var content string
+
+	var keys []string
+	for k := range tree {
+		keys = append(keys, k)
+	}
+
+	for i := 0; i < len(keys); i++ {
+		for j := i + 1; j < len(keys); j++ {
+			if keys[i] > keys[j] {
+				keys[i], keys[j] = keys[j], keys[i]
+			}
+		}
+	}
+
+	for _, filename := range keys {
+		content += filename + tree[filename]
+	}
+
+	return simpleHash(content)
+}
+
 func simpleHash(input string) string {
 	var hash int64 = 5381
 

@@ -33,22 +33,38 @@ func (r *Repository) Commit(message string, files map[string][]byte) string {
 		r.refs = avl.NewTree()
 	}
 
-	treeHash := createTreeHash(files)
-
 	tree := make(map[string]string)
+
+	headCommit := r.GetHeadCommit()
+	if headCommit != nil {
+		prevTreeValue, exists := r.objects.Get(headCommit.Tree)
+		if exists {
+			prevTree := prevTreeValue.(map[string]string)
+			for path, objectHash := range prevTree {
+				tree[path] = objectHash
+			}
+		}
+	}
+
 	for path, content := range files {
 		objectHash := createObjectHash(content)
 		r.objects.Set(objectHash, content)
 		tree[path] = objectHash
 	}
 
+	treeHash := createTreeHashFromMap(tree)
 	r.objects.Set(treeHash, tree)
 
 	timestamp := int64(12345)
 
+	parents := []string{}
+	if headCommit != nil {
+		parents = append(parents, headCommit.Hash)
+	}
+
 	commit := &Commit{
 		Tree:      treeHash,
-		Parents:   []string{},
+		Parents:   parents,
 		Author:    r.identity,
 		Committer: r.identity,
 		Message:   message,
