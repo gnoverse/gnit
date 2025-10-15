@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"os"
 	"strings"
 )
@@ -16,24 +15,13 @@ type Config struct {
 }
 
 type GnitFile struct {
-	RealmPath   string   `json:"realm_path"`
 	StagedFiles []string `json:"staged_files"`
 }
 
 func DefaultConfig() *Config {
-	realmPath := "gno.land/r/example"
-
-	if data, err := os.ReadFile(".gnit"); err == nil {
-		content := strings.TrimSpace(string(data))
-
-		var gnitFile GnitFile
-		if err := json.Unmarshal([]byte(content), &gnitFile); err == nil {
-			if gnitFile.RealmPath != "" {
-				realmPath = gnitFile.RealmPath
-			}
-		} else if content != "" {
-			realmPath = content
-		}
+	realmPath := readPackagePathFromGnomod()
+	if realmPath == "" {
+		realmPath = "gno.land/r/example"
 	}
 
 	return &Config{
@@ -44,4 +32,27 @@ func DefaultConfig() *Config {
 		GasWanted: "5000000000",
 		Account:   "test",
 	}
+}
+
+func readPackagePathFromGnomod() string {
+	data, err := os.ReadFile("gnomod.toml")
+	if err != nil {
+		return ""
+	}
+
+	content := string(data)
+	lines := strings.Split(content, "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "module") {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				pkgPath := strings.Trim(parts[1], "\"")
+				return pkgPath
+			}
+		}
+	}
+
+	return ""
 }

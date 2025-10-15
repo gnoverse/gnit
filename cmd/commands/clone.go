@@ -42,7 +42,6 @@ func (c *Clone) Execute(realmPath string) error {
 	}
 
 	gnitFile := config.GnitFile{
-		RealmPath:   realmPath,
 		StagedFiles: []string{},
 	}
 
@@ -56,6 +55,7 @@ func (c *Clone) Execute(realmPath string) error {
 	cloneCfg.RealmPath = realmPath
 
 	pull := NewPull(c.client, &cloneCfg)
+	pull.SetSourceMode(true)
 	_ = pull.ExecuteAll()
 
 	fmt.Printf("\nRepository cloned successfully into '%s'!\n", repoName)

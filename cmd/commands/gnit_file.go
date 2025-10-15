@@ -25,18 +25,11 @@ func ReadGnitFile() (*config.GnitFile, error) {
 	content := strings.TrimSpace(string(data))
 
 	var gnitFile config.GnitFile
-	if err := json.Unmarshal([]byte(content), &gnitFile); err == nil {
-		return &gnitFile, nil
+	if err := json.Unmarshal([]byte(content), &gnitFile); err != nil {
+		return nil, fmt.Errorf("invalid .gnit file format: %w", err)
 	}
 
-	if content != "" {
-		return &config.GnitFile{
-			RealmPath:   content,
-			StagedFiles: []string{},
-		}, nil
-	}
-
-	return nil, fmt.Errorf("invalid .gnit file format")
+	return &gnitFile, nil
 }
 
 func WriteGnitFileData(gf *config.GnitFile) error {
