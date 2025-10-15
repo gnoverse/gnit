@@ -43,7 +43,7 @@ func NewMatcher(root string) (*Matcher, error) {
 }
 
 func (m *Matcher) Match(path string) bool {
-	if strings.Contains(path, ".git/") || path == ".git" {
+	if strings.Contains(path, ".git/") || path == ".git" || path == ".gnit" {
 		return true
 	}
 

@@ -41,6 +41,7 @@ func (c *Client) QueryRaw(expression string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("query failed: %w", err)
 	}
+	fmt.Println("QueryRaw output:", string(output))
 
 	return extractDataLine(string(output))
 }

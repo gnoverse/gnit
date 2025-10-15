@@ -85,7 +85,7 @@ func (a *Add) collectFiles(path string, matcher *ignore.Matcher, result map[stri
 		cleanPath = cleanPath[2:]
 	}
 
-	if matcher.Match(cleanPath) {
+	if cleanPath == ".gnit" || matcher.Match(cleanPath) {
 		return nil
 	}
 
@@ -104,7 +104,7 @@ func (a *Add) collectFiles(path string, matcher *ignore.Matcher, result map[stri
 				cleanP = cleanP[2:]
 			}
 
-			if !matcher.Match(cleanP) {
+			if cleanP != ".gnit" && !matcher.Match(cleanP) {
 				result[cleanP] = true
 			}
 

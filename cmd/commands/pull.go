@@ -89,13 +89,13 @@ func parseFileList(data string) ([]string, error) {
 
 	sliceStart := strings.Index(str, "slice[")
 	if sliceStart == -1 {
-		return []string{}, fmt.Errorf("invalid format: missing 'slice['")
+		return []string{}, nil
 	}
 
 	sliceStart += len("slice[")
 	sliceEnd := strings.LastIndex(str, "]")
 	if sliceEnd == -1 || sliceEnd <= sliceStart {
-		return []string{}, fmt.Errorf("invalid format: missing closing ']'")
+		return []string{}, nil
 	}
 
 	content := str[sliceStart:sliceEnd]
