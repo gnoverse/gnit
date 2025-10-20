@@ -58,18 +58,23 @@ func (p *Pull) ExecuteAll() error {
 	fmt.Println("Pulling all files from repository...")
 
 	packageAlias := config.PackageAlias(p.config.RealmPath)
-	query := fmt.Sprintf("%s.Repository.SerializePullAll()", packageAlias)
 
-	serializedData, err := p.client.RunQuery(p.config.RealmPath, query)
+	listQuery := fmt.Sprintf("%s.Repository.ListFiles()", packageAlias)
+	listData, err := p.client.RunQuery(p.config.RealmPath, listQuery)
 	if err != nil {
 		if p.sourceMode {
 			fmt.Println("Repository not found or empty, trying to pull realm source files...")
 			return p.pullRealmSource()
 		}
-		return fmt.Errorf("failed to pull files: %w", err)
+		return fmt.Errorf("failed to list files: %w", err)
 	}
 
-	if len(serializedData) == 0 {
+	filenames, err := parseFileList(string(listData))
+	if err != nil {
+		return fmt.Errorf("failed to parse file list: %w", err)
+	}
+
+	if len(filenames) == 0 {
 		fmt.Println("No files found in repository")
 		if p.sourceMode {
 			return p.pullRealmSource()
@@ -77,9 +82,14 @@ func (p *Pull) ExecuteAll() error {
 		return nil
 	}
 
-	files, err := parseSerializedFiles(string(serializedData))
-	if err != nil {
-		return fmt.Errorf("failed to parse files: %w", err)
+	files := make(map[string][]byte)
+	for _, filename := range filenames {
+		pullQuery := fmt.Sprintf("%s.Repository.Pull(\"%s\")", packageAlias, filename)
+		content, err := p.client.RunQuery(p.config.RealmPath, pullQuery)
+		if err != nil {
+			return fmt.Errorf("failed to pull file %s: %w", filename, err)
+		}
+		files[filename] = content
 	}
 
 	if len(files) == 0 {

@@ -98,45 +98,123 @@ func (c *Client) Run(gnoCode string) error {
 }
 
 func (c *Client) RunQuery(realmPath string, expression string) ([]byte, error) {
-	gnoCode := fmt.Sprintf(`package main
+	parts := strings.Split(realmPath, "/")
+	packageAlias := parts[len(parts)-1]
 
-import (
-	"%s"
-)
+	queryExpression := strings.Replace(expression, packageAlias+".", realmPath+".", 1)
 
-func main() {
-	result := %s
-	content := make([]byte, len(result))
-	copy(content, result)
-	println(string(content))
-}
-`, realmPath, expression)
-
-	tmpFile := "/tmp/gnit_query.gno"
-	if err := os.WriteFile(tmpFile, []byte(gnoCode), 0644); err != nil {
-		return nil, fmt.Errorf("failed to create temp file: %w", err)
+	if strings.Contains(expression, ".Repository.Pull(") {
+		return c.QueryFileInChunks(queryExpression)
 	}
-	defer os.Remove(tmpFile)
 
-	cmd := exec.Command("gnokey", "maketx", "run",
-		"-gas-fee", c.config.GasFee,
-		"-gas-wanted", c.config.GasWanted,
-		"-broadcast",
-		"-chainid", c.config.ChainID,
-		"-remote", c.config.Remote,
-		c.config.Account,
-		tmpFile)
+	return c.QueryDirectInChunks(queryExpression)
+}
 
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
+func (c *Client) QueryFileInChunks(expression string) ([]byte, error) {
+	sizeQuery := strings.Replace(expression, "Repository.Pull(", "Repository.GetFileSize(", 1)
+	sizeOutput, err := c.QueryEval(sizeQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file size: %w", err)
+	}
+
+	sizeOutput = strings.TrimPrefix(sizeOutput, "data: ")
+	var size int
+	if _, err := fmt.Sscanf(sizeOutput, "(%d int)", &size); err != nil {
+		return nil, fmt.Errorf("failed to parse file size: %w", err)
+	}
+
+	if size < 0 {
+		return nil, fmt.Errorf("file not found")
+	}
+
+	if size == 0 {
+		return []byte{}, nil
+	}
+
+	var content []byte
+	chunkSize := 200
+	for offset := 0; offset < size; offset += chunkSize {
+		chunkQuery := strings.Replace(expression, "Repository.Pull(", "Repository.GetFileChunk(", 1)
+		chunkQuery = strings.Replace(chunkQuery, ")", fmt.Sprintf(", %d, %d)", offset, chunkSize), 1)
+
+		chunkOutput, err := c.QueryEval(chunkQuery)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get chunk at offset %d: %w", offset, err)
+		}
+
+		chunk := extractStringFromQuery(chunkOutput)
+		content = append(content, []byte(chunk)...)
+	}
+
+	return content, nil
+}
+
+func (c *Client) QueryEval(expression string) (string, error) {
+	cmd := exec.Command("gnokey", "query", "vm/qeval",
+		"-data", expression,
+		"-remote", c.config.Remote)
 
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("run query failed: %w", err)
+		return "", fmt.Errorf("query failed: %w", err)
 	}
 
-	content := extractTransactionOutput(string(output))
-	return []byte(content), nil
+	return extractDataLine(string(output))
+}
+
+func extractStringFromQuery(output string) string {
+	output = strings.TrimPrefix(output, "data: ")
+
+	startIdx := strings.Index(output, `("`)
+	if startIdx == -1 {
+		return ""
+	}
+	startIdx += 2
+
+	endIdx := strings.LastIndex(output, `" string)`)
+	if endIdx == -1 {
+		return ""
+	}
+
+	content := output[startIdx:endIdx]
+
+	var result strings.Builder
+	for i := 0; i < len(content); i++ {
+		if content[i] == '\\' && i+1 < len(content) {
+			switch content[i+1] {
+			case 'n':
+				result.WriteByte('\n')
+				i++
+			case 't':
+				result.WriteByte('\t')
+				i++
+			case 'r':
+				result.WriteByte('\r')
+				i++
+			case '\\':
+				result.WriteByte('\\')
+				i++
+			case '"':
+				result.WriteByte('"')
+				i++
+			default:
+				result.WriteByte(content[i])
+			}
+		} else {
+			result.WriteByte(content[i])
+		}
+	}
+
+	return result.String()
+}
+
+func (c *Client) QueryDirectInChunks(expression string) ([]byte, error) {
+	output, err := c.QueryEval(expression)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(output), nil
 }
 
 func extractTransactionOutput(output string) string {

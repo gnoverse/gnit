@@ -208,3 +208,45 @@ func escapeString(s string) string {
 	}
 	return result
 }
+
+func (r *Repository) Render(path string) string {
+	if path == "" {
+		files := r.ListFiles()
+		result := "# Repository Files\n\n"
+		for i := 0; i < len(files); i++ {
+			result += "- " + files[i] + "\n"
+		}
+		return result
+	}
+
+	content := r.Pull(path)
+	if content == nil {
+		return "File not found: " + path
+	}
+	return string(content)
+}
+
+func (r *Repository) GetFileChunk(filename string, offset, size int) string {
+	content := r.Pull(filename)
+	if content == nil {
+		return ""
+	}
+
+	end := offset + size
+	if end > len(content) {
+		end = len(content)
+	}
+	if offset >= len(content) {
+		return ""
+	}
+
+	return string(content[offset:end])
+}
+
+func (r *Repository) GetFileSize(filename string) int {
+	content := r.Pull(filename)
+	if content == nil {
+		return -1
+	}
+	return len(content)
+}
