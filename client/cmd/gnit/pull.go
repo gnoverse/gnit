@@ -183,6 +183,38 @@ func parseRealmFileList(output string) []string {
 }
 
 func parseSerializedFiles(data string) (map[string][]byte, error) {
+	data = strings.TrimSpace(data)
+	if strings.HasPrefix(data, "data: (slice[") {
+		start := strings.Index(data, "slice[")
+		if start == -1 {
+			return make(map[string][]byte), fmt.Errorf("invalid format: no 'slice[' found")
+		}
+		start += len("slice[")
+
+		end := strings.LastIndex(data, "]")
+		if end == -1 || end <= start {
+			return make(map[string][]byte), fmt.Errorf("invalid format: no closing ']' found")
+		}
+
+		hexData := data[start:end]
+
+		var decoded []byte
+		if strings.HasPrefix(hexData, "0x") {
+			hexData = hexData[2:]
+		}
+
+		for i := 0; i < len(hexData); i += 2 {
+			if i+1 >= len(hexData) {
+				break
+			}
+			var b byte
+			fmt.Sscanf(hexData[i:i+2], "%02x", &b)
+			decoded = append(decoded, b)
+		}
+
+		data = string(decoded)
+	}
+
 	lines := strings.Split(data, "\n")
 	files := make(map[string][]byte)
 
@@ -204,31 +236,45 @@ func parseSerializedFiles(data string) (map[string][]byte, error) {
 	return files, nil
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func unescapeString(s string) string {
-	result := ""
+	var result strings.Builder
 	i := 0
 	for i < len(s) {
 		if s[i] == '\\' && i+1 < len(s) {
 			next := s[i+1]
-			if next == '\\' {
-				result += "\\"
+			switch next {
+			case '\\':
+				result.WriteByte('\\')
 				i += 2
-			} else if next == '|' {
-				result += "|"
+			case '|':
+				result.WriteByte('|')
 				i += 2
-			} else if next == 'n' {
-				result += "\n"
+			case 'n':
+				result.WriteByte('\n')
 				i += 2
-			} else {
-				result += string(s[i])
+			case 'r':
+				result.WriteByte('\r')
+				i += 2
+			case 't':
+				result.WriteByte('\t')
+				i += 2
+			default:
+				result.WriteByte(s[i])
 				i++
 			}
 		} else {
-			result += string(s[i])
+			result.WriteByte(s[i])
 			i++
 		}
 	}
-	return result
+	return result.String()
 }
 
 func parseFileList(data string) ([]string, error) {

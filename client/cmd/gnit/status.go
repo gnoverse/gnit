@@ -31,16 +31,27 @@ func (s *Status) Execute() error {
 	}
 
 	packageAlias := config.PackageAlias(s.config.RealmPath)
-	query := fmt.Sprintf("%s.Repository.SerializePullAll()", packageAlias)
 
-	serializedData, err := s.client.RunQuery(s.config.RealmPath, query)
+	listQuery := fmt.Sprintf("%s.Repository.ListFiles()", packageAlias)
+	listData, err := s.client.RunQuery(s.config.RealmPath, listQuery)
 	if err != nil {
-		serializedData = []byte{}
+		listData = []byte{}
 	}
 
 	committedFiles := make(map[string][]byte)
-	if len(serializedData) > 0 {
-		committedFiles, _ = parseSerializedFiles(string(serializedData))
+
+	if len(listData) > 0 {
+		filenames, err := parseFileList(string(listData))
+		if err == nil {
+			for _, filename := range filenames {
+				pullQuery := fmt.Sprintf("%s.Repository.Pull(\"%s\")", packageAlias, filename)
+				content, err := s.client.RunQuery(s.config.RealmPath, pullQuery)
+				if err != nil {
+					continue
+				}
+				committedFiles[filename] = content
+			}
+		}
 	}
 
 	localFiles, err := getLocalFiles()
@@ -74,12 +85,28 @@ func (s *Status) Execute() error {
 		}
 	}
 
+	var deleted []string
+	for filename := range committedFiles {
+		if _, exists := localFiles[filename]; !exists {
+			if !stagedFiles[filename] {
+				deleted = append(deleted, filename)
+			}
+		}
+	}
+
 	fmt.Printf("On branch %s\n", s.config.RealmPath)
+
+	if len(staged) == 0 && len(modified) == 0 && len(untracked) == 0 && len(deleted) == 0 {
+		fmt.Println("Your branch is up to date.")
+		fmt.Println("nothing to commit, working tree clean")
+		return nil
+	}
+
 	fmt.Println()
 
 	if len(staged) > 0 {
 		fmt.Println("Changes to be committed:")
-		fmt.Println("  (use \"gnit reset <file>...\" to unstage)")
+		fmt.Println("  (use \"gnit restore --staged <file>...\" to unstage)")
 		fmt.Println()
 		for _, filename := range staged {
 			_, existsInCommit := committedFiles[filename]
@@ -95,9 +122,20 @@ func (s *Status) Execute() error {
 	if len(modified) > 0 {
 		fmt.Println("Changes not staged for commit:")
 		fmt.Println("  (use \"gnit add <file>...\" to update what will be committed)")
+		fmt.Println("  (use \"gnit restore <file>...\" to discard changes in working directory)")
 		fmt.Println()
 		for _, filename := range modified {
 			fmt.Printf("\tmodified:   %s\n", filename)
+		}
+		fmt.Println()
+	}
+
+	if len(deleted) > 0 {
+		fmt.Println("Deleted files:")
+		fmt.Println("  (use \"gnit pull <file>...\" to restore)")
+		fmt.Println()
+		for _, filename := range deleted {
+			fmt.Printf("\tdeleted:    %s\n", filename)
 		}
 		fmt.Println()
 	}
@@ -110,10 +148,6 @@ func (s *Status) Execute() error {
 			fmt.Printf("\t%s\n", filename)
 		}
 		fmt.Println()
-	}
-
-	if len(staged) == 0 && len(modified) == 0 && len(untracked) == 0 {
-		fmt.Println("nothing to commit, working tree clean")
 	}
 
 	return nil
@@ -131,7 +165,7 @@ func getLocalFiles() (map[string][]byte, error) {
 			continue
 		}
 
-		if entry.Name() == ".gnit" || entry.Name() == "gnomod.toml" {
+		if entry.Name() == ".gnit" {
 			continue
 		}
 
