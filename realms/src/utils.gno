@@ -77,3 +77,143 @@ func simpleHash(input string) string {
 
 	return strconv.FormatInt(hash, 16)
 }
+
+func hasPrefix(s, prefix string) bool {
+	if len(prefix) > len(s) {
+		return false
+	}
+	for i := 0; i < len(prefix); i++ {
+		if s[i] != prefix[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func hasSuffix(s, suffix string) bool {
+	if len(suffix) > len(s) {
+		return false
+	}
+	offset := len(s) - len(suffix)
+	for i := 0; i < len(suffix); i++ {
+		if s[offset+i] != suffix[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func trimSuffix(s, suffix string) string {
+	if hasSuffix(s, suffix) {
+		return s[:len(s)-len(suffix)]
+	}
+	return s
+}
+
+func splitPath(path string) []string {
+	if path == "" {
+		return []string{}
+	}
+	
+	var parts []string
+	current := ""
+	
+	for i := 0; i < len(path); i++ {
+		if path[i] == '/' {
+			if current != "" {
+				parts = append(parts, current)
+				current = ""
+			}
+		} else {
+			current += string(path[i])
+		}
+	}
+	
+	if current != "" {
+		parts = append(parts, current)
+	}
+	
+	return parts
+}
+
+func joinPath(parts []string) string {
+	if len(parts) == 0 {
+		return ""
+	}
+	
+	result := parts[0]
+	for i := 1; i < len(parts); i++ {
+		result += "/" + parts[i]
+	}
+	return result
+}
+
+func (r *Repository) ListDirectory(dirPath string) (files []string, dirs []string) {
+	dirPath = trimSuffix(dirPath, "/")
+	if dirPath != "" {
+		dirPath += "/"
+	}
+	
+	allFiles := r.ListFiles()
+	seenDirs := make(map[string]bool)
+	
+	for i := 0; i < len(allFiles); i++ {
+		file := allFiles[i]
+		
+		if dirPath == "" {
+			parts := splitPath(file)
+			if len(parts) == 1 {
+				files = append(files, file)
+			} else if len(parts) > 1 {
+				if !seenDirs[parts[0]] {
+					dirs = append(dirs, parts[0])
+					seenDirs[parts[0]] = true
+				}
+			}
+		} else {
+			if hasPrefix(file, dirPath) {
+				relative := file[len(dirPath):]
+				parts := splitPath(relative)
+				
+				if len(parts) == 1 {
+					files = append(files, relative)
+				} else if len(parts) > 1 {
+					if !seenDirs[parts[0]] {
+						dirs = append(dirs, parts[0])
+						seenDirs[parts[0]] = true
+					}
+				}
+			}
+		}
+	}
+	
+	return files, dirs
+}
+
+func (r *Repository) IsDirectory(path string) bool {
+	path = trimSuffix(path, "/")
+	if path == "" {
+		return true
+	}
+	
+	path += "/"
+	allFiles := r.ListFiles()
+	
+	for i := 0; i < len(allFiles); i++ {
+		if hasPrefix(allFiles[i], path) {
+			return true
+		}
+	}
+	
+	return false
+}
+
+func formatBytes(size int) string {
+	if size < 1024 {
+		return strconv.Itoa(size) + " B"
+	}
+	if size < 1024*1024 {
+		return strconv.Itoa(size/1024) + " KB"
+	}
+	return strconv.Itoa(size/(1024*1024)) + " MB"
+}

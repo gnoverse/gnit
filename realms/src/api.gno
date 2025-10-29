@@ -1,7 +1,12 @@
 package gnit
 
 import (
+	"chain/runtime"
+	"strconv"
+	"strings"
+
 	"gno.land/p/nt/avl"
+	"gno.land/p/nt/ufmt"
 )
 
 func NewRepository(name string) *Repository {
@@ -210,20 +215,150 @@ func escapeString(s string) string {
 }
 
 func (r *Repository) Render(path string) string {
+	path = trimSuffix(path, "/")
+
 	if path == "" {
-		files := r.ListFiles()
-		result := "# Repository Files\n\n"
-		for i := 0; i < len(files); i++ {
-			result += "- " + files[i] + "\n"
-		}
+		return r.renderHome()
+	}
+
+	if r.IsDirectory(path) {
+		return r.renderDirectory(path)
+	}
+
+	return r.renderFile(path)
+}
+
+func (r *Repository) renderHome() string {
+	addr := strings.TrimSuffix(runtime.CurrentRealm().PkgPath(), "/")
+	addr = addr[strings.Index(addr, "/r/"):]
+	result := "# " + r.identity.Name + "\n\n"
+
+	headCommit := r.GetHeadCommit()
+	if headCommit != nil {
+		result += "**Branch:** " + r.head + " | "
+		result += "**Latest:** " + headCommit.Hash[:8] + " - \"" + headCommit.Message + "\"\n\n"
+	} else {
+		result += "**Branch:** " + r.head + " | No commits yet\n\n"
+	}
+
+	files, dirs := r.ListDirectory("")
+
+	totalItems := len(files) + len(dirs)
+	if totalItems == 0 {
+		result += "_Repository is empty_\n"
 		return result
 	}
 
+	result += "## Files (" + strconv.Itoa(totalItems) + ")\n\n"
+
+	for i := 0; i < len(dirs); i++ {
+		result += ufmt.Sprintf("[%s %s/](%s:%s/)\n\n", "📁", dirs[i], addr, dirs[i])
+	}
+
+	for i := 0; i < len(files); i++ {
+		size := r.GetFileSize(files[i])
+		result += ufmt.Sprintf("[%s %s](%s:%s)", "📄", files[i], addr, files[i])
+		result += " - " + formatBytes(size)
+		result += "\n\n"
+	}
+
+	return result
+}
+
+func (r *Repository) renderDirectory(path string) string {
+	addr := strings.TrimSuffix(runtime.CurrentRealm().PkgPath(), "/")
+	addr = addr[strings.Index(addr, "/r/"):]
+
+	displayPath := path
+	if displayPath == "" {
+		displayPath = "/"
+	} else {
+		displayPath = "/" + displayPath
+	}
+
+	result := "# " + r.identity.Name + displayPath + "\n\n"
+	result += "[← Back](" + addr + ")\n\n"
+
+	files, dirs := r.ListDirectory(path)
+
+	totalItems := len(files) + len(dirs)
+	if totalItems == 0 {
+		result += "_Empty directory_\n"
+		return result
+	}
+
+	result += "## Files (" + strconv.Itoa(totalItems) + ")\n\n"
+
+	for i := 0; i < len(dirs); i++ {
+		result += ufmt.Sprintf("[%s %s/](%s%s:%s/)\n\n", "📁", dirs[i], addr, path, dirs[i])
+	}
+
+	for i := 0; i < len(files); i++ {
+		size := r.GetFileSize(files[i])
+		result += ufmt.Sprintf("[%s %s](%s:%s/%s)", "📄", files[i], addr, path, files[i])
+		result += " - " + formatBytes(size)
+		result += "\n\n"
+	}
+
+	return result
+}
+
+func (r *Repository) renderFile(path string) string {
+	addr := strings.TrimSuffix(runtime.CurrentRealm().PkgPath(), "/")
+	addr = addr[strings.Index(addr, "/r/"):]
+
 	content := r.Pull(path)
 	if content == nil {
-		return "File not found: " + path
+		return "# File not found\n\nThe file `" + path + "` does not exist in this repository."
 	}
-	return string(content)
+
+	result := "# " + path + "\n\n"
+
+	parts := splitPath(path)
+	if len(parts) > 1 {
+		parentPath := ""
+		for i := 0; i < len(parts)-1; i++ {
+			if i > 0 {
+				parentPath += "/"
+			}
+			parentPath += parts[i]
+		}
+		result += "[← Back to " + parentPath + "](" + addr + ":" + parentPath + ")\n\n"
+	} else {
+		result += "[← Back](" + addr + ")\n\n"
+	}
+
+	size := len(content)
+	result += "**Size:** " + formatBytes(size) + "\n\n"
+
+	ext := ""
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == '.' {
+			ext = path[i+1:]
+			break
+		}
+		if path[i] == '/' {
+			break
+		}
+	}
+
+	if ext == "gno" || ext == "go" || ext == "md" || ext == "json" || ext == "yaml" || ext == "toml" {
+		result += "```" + ext + "\n"
+		result += string(content)
+		if !hasSuffix(string(content), "\n") {
+			result += "\n"
+		}
+		result += "```\n"
+	} else {
+		result += "```\n"
+		result += string(content)
+		if !hasSuffix(string(content), "\n") {
+			result += "\n"
+		}
+		result += "```\n"
+	}
+
+	return result
 }
 
 func (r *Repository) GetFileChunk(filename string, offset, size int) string {
